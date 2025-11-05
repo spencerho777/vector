@@ -75,3 +75,19 @@ pub fn build_integration_image() -> Result<()> {
     waiting!("Building {image}");
     cmd.check_run()
 }
+
+pub const ALL_E2E_FEATURE_FLAG: &str = "all-e2e-tests";
+
+pub fn build_e2e_image() -> Result<()> {
+    let dockerfile = test_runner_dockerfile();
+    let image = format!("vector-test-runner-{}", RustToolchainConfig::rust_version());
+    let mut cmd = prepare_build_command(
+        &image,
+        &dockerfile,
+        Some(&[ALL_E2E_FEATURE_FLAG.to_string()]),
+        &Environment::default(),
+        true, // E2E tests pre-build Vector in the image.
+    );
+    waiting!("Building {image}");
+    cmd.check_run()
+}

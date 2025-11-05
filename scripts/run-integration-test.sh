@@ -127,7 +127,7 @@ for TEST_ENV in "${TEST_ENVIRONMENTS[@]}"; do
   docker run --rm -v vector_target:/output/"${TEST_NAME}" alpine:3.20 \
     sh -c "rm -rf /output/${TEST_NAME}/*"
 
-  cargo vdev "${VERBOSITY}" "${TEST_TYPE}" start --all-features "${TEST_NAME}" "${TEST_ENV}"
+  cargo vdev "${VERBOSITY}" "${TEST_TYPE}" start "${TEST_NAME}" "${TEST_ENV}"
   START_RET=$?
   print_compose_logs_on_failure "$START_RET"
 

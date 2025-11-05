@@ -14,14 +14,13 @@ use super::{
 use crate::{
     app::CommandExt as _,
     testing::{
-        build::ALL_INTEGRATIONS_FEATURE_FLAG,
+        build::{ALL_E2E_FEATURE_FLAG, ALL_INTEGRATIONS_FEATURE_FLAG},
         docker::{CONTAINER_TOOL, DOCKER_SOCKET},
     },
     utils::environment::{Environment, extract_present, rename_environment_keys},
 };
 
 const NETWORK_ENV_VAR: &str = "VECTOR_NETWORK";
-const E2E_FEATURE_FLAG: &str = "all-e2e-tests";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ComposeTestKind {
@@ -53,7 +52,7 @@ impl ComposeTestLocalConfig {
         Self {
             kind: ComposeTestKind::E2E,
             directory: E2E_TESTS_DIR,
-            feature_flag: E2E_FEATURE_FLAG,
+            feature_flag: ALL_E2E_FEATURE_FLAG,
         }
     }
 }
@@ -223,8 +222,13 @@ impl ComposeTest {
         // image for the runner. So we must build that image before starting the
         // compose so that it is available.
         if self.local_config.kind == ComposeTestKind::E2E {
+            let features = if self.all_features {
+                vec![self.local_config.feature_flag.to_string()]
+            } else {
+                self.config.features.clone()
+            };
             self.runner.build(
-                Some(&self.config.features),
+                Some(&features),
                 &self.env_config,
                 true, // E2E tests build Vector in the image
             )?;

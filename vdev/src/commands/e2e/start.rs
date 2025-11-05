@@ -1,9 +1,10 @@
 use anyhow::Result;
 use clap::Args;
 
-use crate::testing::integration::ComposeTestLocalConfig;
-
 /// Start an environment
+///
+/// E2E tests build the test runner image during start because Vector runs
+/// as a service in the compose environment.
 #[derive(Args, Debug)]
 #[command()]
 pub struct Cli {
@@ -20,8 +21,7 @@ pub struct Cli {
 
 impl Cli {
     pub fn exec(self) -> Result<()> {
-        crate::commands::compose_tests::start::exec(
-            ComposeTestLocalConfig::e2e(),
+        crate::commands::compose_tests::start::exec_e2e(
             &self.test,
             self.environment.as_ref(),
             self.all_features,
