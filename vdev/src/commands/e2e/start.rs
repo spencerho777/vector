@@ -4,16 +4,15 @@ use clap::Args;
 /// Start an environment
 ///
 /// E2E tests build the test runner image during start because Vector runs
-/// as a service in the compose environment.
+/// as a service in the compose environment. The image is built with just
+/// this test's features for faster builds.
+///
+/// To pre-build a shared image with all E2E features, use `vdev e2e build` first.
 #[derive(Args, Debug)]
 #[command()]
 pub struct Cli {
     /// The e2e test name
     test: String,
-
-    /// Compile the test runner with all e2e test features (instead of just this test's features)
-    #[arg(long)]
-    all_features: bool,
 
     /// The desired environment name to start. If omitted, the first environment name is used.
     environment: Option<String>,
@@ -21,10 +20,6 @@ pub struct Cli {
 
 impl Cli {
     pub fn exec(self) -> Result<()> {
-        crate::commands::compose_tests::start::exec_e2e(
-            &self.test,
-            self.environment.as_ref(),
-            self.all_features,
-        )
+        crate::commands::compose_tests::start::exec_e2e(&self.test, self.environment.as_ref())
     }
 }

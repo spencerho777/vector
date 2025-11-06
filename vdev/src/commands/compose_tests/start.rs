@@ -18,7 +18,6 @@ pub(crate) fn exec_integration(integration: &str, environment: Option<&String>) 
         ComposeTestLocalConfig::integration(),
         integration,
         environment,
-        false, // Integration tests build lazily in test(), not here
         0,
     )?
     .start()
@@ -26,14 +25,15 @@ pub(crate) fn exec_integration(integration: &str, environment: Option<&String>) 
 
 /// Start an E2E test environment
 /// E2E tests build the image during start because Vector runs as a service in compose
-pub(crate) fn exec_e2e(test: &str, environment: Option<&String>, all_features: bool) -> Result<()> {
+/// Builds with test-specific features for faster builds. Use `vdev e2e build` to pre-build
+/// a shared image with all E2E features.
+pub(crate) fn exec_e2e(test: &str, environment: Option<&String>) -> Result<()> {
     let environment = select_environment(ComposeTestLocalConfig::e2e(), test, environment)?;
     debug!("Selected environment: {environment:#?}");
     ComposeTest::generate(
         ComposeTestLocalConfig::e2e(),
         test,
         environment,
-        all_features,
         0,
     )?
     .start()

@@ -35,7 +35,7 @@ pub fn exec(
     for environment in environments {
         // Use test-specific features from test.yaml for testing
         // The image should already exist (built by 'start' or pulled from CI)
-        ComposeTest::generate(local_config, integration, environment, false, retries)?
+        ComposeTest::generate(local_config, integration, environment, retries)?
             .test(args.to_owned())?;
     }
     Ok(())

@@ -13,10 +13,7 @@ use super::{
 };
 use crate::{
     app::CommandExt as _,
-    testing::{
-        build::{ALL_E2E_FEATURE_FLAG, ALL_INTEGRATIONS_FEATURE_FLAG},
-        docker::{CONTAINER_TOOL, DOCKER_SOCKET},
-    },
+    testing::docker::{CONTAINER_TOOL, DOCKER_SOCKET},
     utils::environment::{Environment, extract_present, rename_environment_keys},
 };
 
@@ -32,27 +29,22 @@ pub(crate) enum ComposeTestKind {
 pub(crate) struct ComposeTestLocalConfig {
     pub(crate) kind: ComposeTestKind,
     pub(crate) directory: &'static str,
-    pub(crate) feature_flag: &'static str,
 }
 
 impl ComposeTestLocalConfig {
-    /// Integration tests are located in the `tests/integration` dir,
-    /// and are the full feature flag is `all-integration-tests`.
+    /// Integration tests are located in the `tests/integration` dir.
     pub(crate) fn integration() -> Self {
         Self {
             kind: ComposeTestKind::Integration,
             directory: INTEGRATION_TESTS_DIR,
-            feature_flag: ALL_INTEGRATIONS_FEATURE_FLAG,
         }
     }
 
-    /// E2E tests are located in the `tests/e2e` dir,
-    /// and the full feature flag is `all-e2e-tests`.
+    /// E2E tests are located in the `tests/e2e` dir.
     pub(crate) fn e2e() -> Self {
         Self {
             kind: ComposeTestKind::E2E,
             directory: E2E_TESTS_DIR,
-            feature_flag: ALL_E2E_FEATURE_FLAG,
         }
     }
 }
@@ -66,8 +58,6 @@ pub(crate) struct ComposeTest {
     runner: IntegrationTestRunner,
     compose: Option<Compose>,
     env_config: Environment,
-    /// When true, uses 'all-integration-tests' or 'all-e2e-tests' feature. When false, uses features from test.yaml.
-    all_features: bool,
     retries: u8,
 }
 
@@ -76,7 +66,6 @@ impl ComposeTest {
         local_config: ComposeTestLocalConfig,
         test_name: impl Into<String>,
         environment: impl Into<String>,
-        all_features: bool,
         retries: u8,
     ) -> Result<ComposeTest> {
         let test_name: String = test_name.into();
@@ -90,7 +79,6 @@ impl ComposeTest {
         let compose = Compose::new(test_dir, env_config.clone(), network_name.clone())?;
 
         // Always use shared container name (vector-test-runner-1.90:latest)
-        // The all_features flag only affects which Cargo features are compiled into the image
         let runner = IntegrationTestRunner::new(
             None, // Always use shared container name
             &config.runner,
@@ -107,7 +95,6 @@ impl ComposeTest {
             runner,
             compose,
             env_config: rename_environment_keys(&env_config),
-            all_features,
             retries,
         };
         trace!("Generated {compose_test:#?}");
@@ -172,14 +159,9 @@ impl ComposeTest {
         let mut args = self.config.args.clone().unwrap_or_default();
 
         args.push("--features".to_string());
-
-        // When all_features=true: use 'all-integration-tests' or 'all-e2e-tests'
-        // When all_features=false: use test-specific features from test.yaml
-        args.push(if self.all_features {
-            self.local_config.feature_flag.to_string()
-        } else {
-            self.config.features.join(",")
-        });
+        // Always use test-specific features from test.yaml
+        // Use `vdev int build` or `vdev e2e build` to pre-build with all features
+        args.push(self.config.features.join(","));
 
         // If the test field is not present then use the --lib flag
         match self.config.test {
@@ -222,13 +204,10 @@ impl ComposeTest {
         // image for the runner. So we must build that image before starting the
         // compose so that it is available.
         if self.local_config.kind == ComposeTestKind::E2E {
-            let features = if self.all_features {
-                vec![self.local_config.feature_flag.to_string()]
-            } else {
-                self.config.features.clone()
-            };
+            // Always build with test-specific features for faster local builds
+            // Use `vdev e2e build` to pre-build with all E2E features
             self.runner.build(
-                Some(&features),
+                Some(&self.config.features),
                 &self.env_config,
                 true, // E2E tests build Vector in the image
             )?;
